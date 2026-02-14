@@ -1,0 +1,62 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ─── Helpers ────────────────────────────────────────────────
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    // ─── Users ──────────────────────────────────────────────────
+    match /users/{userId} {
+      allow read: if isOwner(userId);
+      allow create: if isOwner(userId);
+      allow update: if isOwner(userId);
+      allow delete: if isOwner(userId);
+    }
+
+    // ─── Medicines ──────────────────────────────────────────────
+    match /users/{userId}/medicines/{medicineId} {
+      allow read: if isOwner(userId);
+      allow create: if isOwner(userId)
+                    && request.resource.data.keys().hasAll(['name', 'dosage', 'times'])
+                    && request.resource.data.name is string
+                    && request.resource.data.dosage is string;
+      allow update: if isOwner(userId);
+      allow delete: if isOwner(userId);
+    }
+
+    // ─── Adherence ──────────────────────────────────────────────
+    match /users/{userId}/adherence/{dateId} {
+      allow read: if isOwner(userId);
+      allow create: if isOwner(userId);
+      allow update: if isOwner(userId);
+      // No delete — keep history
+    }
+
+    // ─── Chat / AI Messages ─────────────────────────────────────
+    match /users/{userId}/chats/{chatId} {
+      allow read: if isOwner(userId);
+      allow create: if isOwner(userId);
+      allow delete: if isOwner(userId);
+      // No update — messages are immutable
+    }
+
+    // ─── Prescriptions ──────────────────────────────────────────
+    match /users/{userId}/prescriptions/{prescriptionId} {
+      allow read: if isOwner(userId);
+      allow create: if isOwner(userId);
+      allow update: if isOwner(userId);
+      allow delete: if isOwner(userId);
+    }
+
+    // ─── Block all other paths ──────────────────────────────────
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
