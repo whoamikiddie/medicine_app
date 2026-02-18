@@ -1,9 +1,9 @@
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:image_picker/image_picker.dart';
-import '../services/cloudinary_service.dart';
 import '../config/app_theme.dart';
 import '../providers/medicine_provider.dart';
 import '../services/ai_service.dart';
@@ -257,6 +257,88 @@ class _AIChatScreenState extends State<AIChatScreen>
 
   Future<void> _pickAndSendImage() async {
     try {
+      // Step 1: Ask what type of image
+      final imageType = await showModalBottomSheet<String>(
+        context: context,
+        backgroundColor: Colors.transparent,
+        builder: (ctx) {
+          final isDark = Theme.of(ctx).brightness == Brightness.dark;
+          return Container(
+            margin: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF1E293B) : Colors.white,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const SizedBox(height: 12),
+                Container(
+                  width: 40, height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade400,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Text('What are you sharing?',
+                    style: TextStyle(
+                      fontSize: 16, fontWeight: FontWeight.bold,
+                      color: isDark ? Colors.white : AppColors.textDark,
+                    )),
+                ),
+                const SizedBox(height: 4),
+                ListTile(
+                  leading: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF6B4CFF).withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.description_rounded, color: Color(0xFF6B4CFF)),
+                  ),
+                  title: const Text('Prescription / Doctor Note'),
+                  subtitle: const Text('AI will read and explain it'),
+                  onTap: () => Navigator.pop(ctx, 'prescription'),
+                ),
+                ListTile(
+                  leading: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.medication_rounded, color: Colors.orange),
+                  ),
+                  title: const Text('Medicine Label / Packaging'),
+                  subtitle: const Text('AI will identify and explain'),
+                  onTap: () => Navigator.pop(ctx, 'medicine'),
+                ),
+                ListTile(
+                  leading: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.green.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.science_rounded, color: Colors.green),
+                  ),
+                  title: const Text('Health Report / Lab Result'),
+                  subtitle: const Text('AI will summarize key values'),
+                  onTap: () => Navigator.pop(ctx, 'report'),
+                ),
+                const SizedBox(height: 12),
+              ],
+            ),
+          );
+        },
+      );
+
+      if (imageType == null) return;
+
+      // Step 2: Pick image source
       final source = await showModalBottomSheet<ImageSource>(
         context: context,
         backgroundColor: Colors.transparent,
@@ -264,8 +346,7 @@ class _AIChatScreenState extends State<AIChatScreen>
           margin: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             color: Theme.of(ctx).brightness == Brightness.dark
-                ? const Color(0xFF1E293B)
-                : Colors.white,
+                ? const Color(0xFF1E293B) : Colors.white,
             borderRadius: BorderRadius.circular(20),
           ),
           child: Column(
@@ -273,8 +354,7 @@ class _AIChatScreenState extends State<AIChatScreen>
             children: [
               const SizedBox(height: 12),
               Container(
-                width: 40,
-                height: 4,
+                width: 40, height: 4,
                 decoration: BoxDecoration(
                   color: Colors.grey.shade400,
                   borderRadius: BorderRadius.circular(2),
@@ -282,14 +362,12 @@ class _AIChatScreenState extends State<AIChatScreen>
               ),
               const SizedBox(height: 16),
               ListTile(
-                leading: const Icon(Icons.camera_alt_rounded,
-                    color: AppColors.primary),
+                leading: const Icon(Icons.camera_alt_rounded, color: AppColors.primary),
                 title: const Text('Camera'),
                 onTap: () => Navigator.pop(ctx, ImageSource.camera),
               ),
               ListTile(
-                leading: const Icon(Icons.photo_library_rounded,
-                    color: AppColors.primary),
+                leading: const Icon(Icons.photo_library_rounded, color: AppColors.primary),
                 title: const Text('Gallery'),
                 onTap: () => Navigator.pop(ctx, ImageSource.gallery),
               ),
@@ -305,49 +383,65 @@ class _AIChatScreenState extends State<AIChatScreen>
         source: source,
         maxWidth: 1024,
         maxHeight: 1024,
-        imageQuality: 75,
+        imageQuality: 80,
       );
       if (picked == null) return;
 
-      // Show uploading message
+      // Step 3: Show analyzing indicator
       setState(() {
         _messages.add(_ChatMessage(
-          text: '📷 Uploading image...',
+          text: 'Analysing image with AI...',
           isUser: true,
           timestamp: DateTime.now(),
         ));
+        _isTyping = true;
       });
       _scrollToBottom();
 
-      // Upload to Cloudinary
-      final file = File(picked.path);
-      final cloudinary = CloudinaryService();
-      final url = await cloudinary.uploadImage(
-        file,
-        folder: 'medicine_app/ai_chat',
-      );
+      // Step 4: Encode to base64
+      final bytes = await picked.readAsBytes();
+      final base64Image = base64Encode(bytes);
 
-      // Replace the uploading message with the image
+      // Step 5: Build type-specific prompt
+      final prompt = switch (imageType) {
+        'prescription' =>
+          'This is a medical prescription or doctor note. Please:\n'
+          '1. List all medicines prescribed with their dosages\n'
+          '2. Explain what each medicine is for in simple language\n'
+          '3. Note any important instructions (before/after food, frequency, duration)\n'
+          '4. Flag any important warnings or precautions\n'
+          'Be clear and patient-friendly. Add a disclaimer to consult the doctor.',
+        'medicine' =>
+          'This is a medicine label or packaging. Please:\n'
+          '1. Identify the medicine name and active ingredients\n'
+          '2. State the dosage and how to take it\n'
+          '3. List key side effects and warnings\n'
+          '4. Note food interactions if any\n'
+          'Explain in simple, easy-to-understand language.',
+        _ =>
+          'This is a health report or lab result. Please:\n'
+          '1. Identify the type of test/report\n'
+          '2. Highlight key values and whether they appear normal or abnormal\n'
+          '3. Explain what the values mean in simple language\n'
+          '4. Note if anything may require medical attention\n'
+          'Always recommend consulting a doctor for proper interpretation.',
+      };
+
+      // Step 6: Send to Groq vision API
+      final response = await _aiService.sendMessageWithImage(prompt, base64Image);
+
+      if (!mounted) return;
+
       setState(() {
-        _messages.removeLast();
+        _messages.removeLast(); // Remove "Analyzing..." message
         _messages.add(_ChatMessage(
-          text: '📷 Image',
+          text: 'Image submitted for AI analysis',
           isUser: true,
           timestamp: DateTime.now(),
-          imageUrl: url,
         ));
-      });
-      _scrollToBottom();
-
-      // AI response about image
-      setState(() => _isTyping = true);
-      await Future.delayed(const Duration(milliseconds: 800));
-      setState(() {
         _isTyping = false;
         _messages.add(_ChatMessage(
-          text: 'I received your image! 📷 While I can\'t analyze images directly, '
-              'you can share this with your doctor for medical advice. '
-              'Is there anything specific about this image you\'d like to discuss?',
+          text: response,
           isUser: false,
           timestamp: DateTime.now(),
         ));
@@ -356,15 +450,15 @@ class _AIChatScreenState extends State<AIChatScreen>
     } catch (e) {
       if (mounted) {
         setState(() {
-          if (_messages.isNotEmpty && _messages.last.text == '📷 Uploading image...') {
+          _isTyping = false;
+          if (_messages.isNotEmpty &&
+              (_messages.last.text == '📷 Analyzing with AI...' ||
+               _messages.last.text == '📷 Uploading image...')) {
             _messages.removeLast();
           }
         });
-        final msg = e.toString().contains('object-not-found')
-            ? 'Firebase Storage is not enabled. Go to Firebase Console → Storage → Get started.'
-            : 'Image upload failed: $e';
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(msg)),
+          SnackBar(content: Text('Image analysis failed: $e')),
         );
       }
     }

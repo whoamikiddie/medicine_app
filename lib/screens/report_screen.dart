@@ -5,12 +5,18 @@ import 'package:intl/intl.dart';
 import '../config/app_theme.dart';
 import '../providers/medicine_provider.dart';
 import '../providers/user_provider.dart';
+import '../services/ai_service.dart';
 import '../services/pdf_report_service.dart';
 import '../widgets/empty_state.dart';
 
-class ReportScreen extends StatelessWidget {
+class ReportScreen extends StatefulWidget {
   const ReportScreen({super.key});
 
+  @override
+  State<ReportScreen> createState() => _ReportScreenState();
+}
+
+class _ReportScreenState extends State<ReportScreen> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -158,6 +164,11 @@ class ReportScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 12),
                     _buildWeeklyChart(isDark, provider),
+
+                    const SizedBox(height: 20),
+
+                    // AI Insights Card
+                    _AIInsightsCard(provider: provider),
 
                     const SizedBox(height: 20),
                   ],
@@ -636,5 +647,193 @@ class ReportScreen extends StatelessWidget {
     if (adherence >= 80) return AppColors.success;
     if (adherence >= 50) return AppColors.warning;
     return AppColors.error;
+  }
+}
+
+// ─── AI Insights Card ────────────────────────────────────────────────────────
+
+class _AIInsightsCard extends StatefulWidget {
+  final MedicineProvider provider;
+  const _AIInsightsCard({required this.provider});
+
+  @override
+  State<_AIInsightsCard> createState() => _AIInsightsCardState();
+}
+
+class _AIInsightsCardState extends State<_AIInsightsCard> {
+  final AIService _aiService = AIService();
+  String? _insight;
+  bool _loading = false;
+  bool _loaded = false;
+
+  Future<void> _loadInsight() async {
+    if (_loading) return;
+    setState(() => _loading = true);
+
+    final medicines = widget.provider.activeMedicines;
+    _aiService.initialize(medicines: medicines);
+
+    final result = await _aiService.getAdherenceCoaching(
+      medicines: medicines,
+      adherencePercent: widget.provider.adherencePercentage,
+      totalDoses: medicines.fold(0, (s, m) => s + m.times.length),
+      missedDoses: widget.provider.missedMedicines.length,
+    );
+
+    if (mounted) {
+      setState(() {
+        _insight = result;
+        _loading = false;
+        _loaded = true;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF7B2FF7), Color(0xFF4A90E2)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF7B2FF7).withValues(alpha: 0.3),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.psychology_rounded, color: Colors.white, size: 20),
+              ),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('MediBot AI Analysis',
+                      style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                    Text('Personalized adherence coaching',
+                      style: TextStyle(color: Colors.white70, fontSize: 12)),
+                  ],
+                ),
+              ),
+              if (_loaded)
+                GestureDetector(
+                  onTap: () => setState(() { _insight = null; _loaded = false; }),
+                  child: const Icon(Icons.refresh_rounded, color: Colors.white70, size: 20),
+                ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          if (!_loaded && !_loading) ...[
+            const Text(
+              'Get personalized AI coaching based on your real adherence data.',
+              style: TextStyle(color: Colors.white70, fontSize: 13),
+            ),
+            const SizedBox(height: 14),
+            GestureDetector(
+              onTap: _loadInsight,
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
+                ),
+                child: const Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.auto_awesome_rounded, color: Colors.white, size: 18),
+                    SizedBox(width: 8),
+                    Text('Get AI Analysis', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                  ],
+                ),
+              ),
+            ),
+          ] else if (_loading) ...[
+            const Center(
+              child: Column(
+                children: [
+                  CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                  SizedBox(height: 10),
+                  Text('MediBot is analyzing your data...', style: TextStyle(color: Colors.white70, fontSize: 12)),
+                ],
+              ),
+            ),
+          ] else if (_insight != null) ...[
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: _buildFormattedInsight(_insight!),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFormattedInsight(String text) {
+    final lines = text.split('\n');
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: lines.map((line) {
+        if (line.trim().isEmpty) return const SizedBox(height: 6);
+        final isHeader = RegExp(r'^\d+\.\s').hasMatch(line.trim());
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 5),
+          child: _buildRichLine(line.trim(), isHeader),
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _buildRichLine(String line, bool isHeader) {
+    final spans = <TextSpan>[];
+    final regex = RegExp(r'\*\*(.+?)\*\*');
+    int last = 0;
+    for (final match in regex.allMatches(line)) {
+      if (match.start > last) {
+        spans.add(TextSpan(text: line.substring(last, match.start)));
+      }
+      spans.add(TextSpan(
+        text: match.group(1),
+        style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+      ));
+      last = match.end;
+    }
+    if (last < line.length) spans.add(TextSpan(text: line.substring(last)));
+
+    return RichText(
+      text: TextSpan(
+        style: TextStyle(
+          fontSize: isHeader ? 14 : 13,
+          fontWeight: isHeader ? FontWeight.w700 : FontWeight.normal,
+          color: Colors.white,
+          height: 1.5,
+        ),
+        children: spans.isEmpty ? [TextSpan(text: line)] : spans,
+      ),
+    );
   }
 }

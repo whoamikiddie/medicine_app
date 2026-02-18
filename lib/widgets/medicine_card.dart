@@ -102,7 +102,7 @@ class _MedicineCardState extends State<MedicineCard>
     final parts = widget.time.split(':');
     final hour = int.parse(parts[0]);
     final minute = int.parse(parts[1]);
-    return hour < now.hour || (hour == now.hour && minute <= now.minute);
+    return hour < now.hour || (hour == now.hour && minute < now.minute);
   }
 
   /// Remaining days until medicine endDate, null if no endDate
@@ -244,6 +244,7 @@ class _MedicineCardState extends State<MedicineCard>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // Medicine name
                       AnimatedDefaultTextStyle(
                         duration: const Duration(milliseconds: 300),
                         style: TextStyle(
@@ -257,114 +258,103 @@ class _MedicineCardState extends State<MedicineCard>
                         ),
                         child: Text(widget.medicine.name),
                       ),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 6),
+                      
+                      // Time • Dosage row
                       Row(
                         children: [
-                          const Icon(
+                          Icon(
                             Icons.access_time_rounded,
-                            size: 14,
-                            color: AppColors.textMuted,
+                            size: 13,
+                            color: isMissed ? AppColors.error : AppColors.textMuted,
                           ),
-                          const SizedBox(width: 4),
+                          const SizedBox(width: 3),
                           Text(
                             _formattedTime,
-                            style: const TextStyle(
-                              fontSize: 13,
-                              color: AppColors.textMuted,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: isMissed ? AppColors.error : AppColors.textMuted,
+                              fontWeight: isMissed ? FontWeight.w600 : FontWeight.normal,
                             ),
                           ),
-                          const SizedBox(width: 12),
+                          const SizedBox(width: 8),
                           Text(
                             widget.medicine.dosage,
                             style: const TextStyle(
-                              fontSize: 13,
+                              fontSize: 12,
                               color: AppColors.primary,
                               fontWeight: FontWeight.w500,
                             ),
                           ),
                         ],
                       ),
-                      if (_foodLabel.isNotEmpty) ...[
-                        const SizedBox(height: 6),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 3,
-                          ),
-                          decoration: BoxDecoration(
-                            color: AppColors.warning.withValues(alpha: 0.15),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Text(
-                            _foodLabel,
-                            style: const TextStyle(
-                              fontSize: 11,
+                      const SizedBox(height: 6),
+                      // Badges: status + food + days — all in one Wrap row
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 4,
+                        children: [
+                          if (isMissed || widget.isTaken)
+                            _buildBadge(
+                              icon: widget.isTaken ? Icons.check_circle_rounded : Icons.error_rounded,
+                              label: widget.isTaken ? 'Taken' : 'Missed',
+                              color: widget.isTaken ? AppColors.success : AppColors.error,
+                            ),
+                          if (_foodLabel.isNotEmpty)
+                            _buildBadge(
+                              icon: Icons.restaurant_rounded,
+                              label: _foodLabel,
                               color: AppColors.warning,
-                              fontWeight: FontWeight.w500,
                             ),
-                          ),
-                        ),
-                      ],
-                      // Remaining days badge
-                      if (_remainingDays != null) ...[
-                        const SizedBox(height: 6),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 3,
-                          ),
-                          decoration: BoxDecoration(
-                            color: _remainingDays! <= 3
-                                ? AppColors.error.withValues(alpha: 0.15)
-                                : AppColors.primary.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Text(
-                            _remainingDays! <= 0
-                                ? 'Last day'
-                                : '$_remainingDays day${_remainingDays == 1 ? '' : 's'} left',
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: _remainingDays! <= 3
-                                  ? AppColors.error
-                                  : AppColors.primary,
-                              fontWeight: FontWeight.w500,
+                          if (_remainingDays != null)
+                            _buildBadge(
+                              icon: Icons.calendar_today_rounded,
+                              label: _remainingDays! <= 0
+                                  ? 'Last day'
+                                  : '$_remainingDays day${_remainingDays == 1 ? '' : 's'} left',
+                              color: _remainingDays! <= 3 ? AppColors.error : AppColors.primary,
                             ),
-                          ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ],
                   ),
                 ),
 
-                // Take / Taken button
-                _buildActionButton(isDark, isMissed),
+                const SizedBox(width: 8),
 
-                // AI Food Advice button
-                IconButton(
-                  icon: Icon(
-                    Icons.restaurant_menu_rounded,
-                    color: AppColors.warning.withValues(alpha: 0.8),
-                    size: 20,
-                  ),
-                  onPressed: () => _showFoodAdvice(context),
-                  padding: const EdgeInsets.only(left: 4),
-                  constraints: const BoxConstraints(),
-                  tooltip: 'AI Food Advice',
-                ),
-
-                // Delete button
-                if (widget.onDelete != null)
-                  IconButton(
-                    icon: Icon(
-                      Icons.delete_outline_rounded,
-                      color: AppColors.error.withValues(alpha: 0.7),
-                      size: 20,
+                // Right column: Take button on top, icons below
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    _buildActionButton(isDark, isMissed),
+                    const SizedBox(height: 8),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        GestureDetector(
+                          onTap: () => _showFoodAdvice(context),
+                          child: Icon(
+                            Icons.restaurant_menu_rounded,
+                            color: AppColors.warning.withValues(alpha: 0.8),
+                            size: 18,
+                          ),
+                        ),
+                        if (widget.onDelete != null) ...[
+                          const SizedBox(width: 12),
+                          GestureDetector(
+                            onTap: widget.onDelete,
+                            child: Icon(
+                              Icons.delete_outline_rounded,
+                              color: AppColors.error.withValues(alpha: 0.7),
+                              size: 18,
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
-                    onPressed: widget.onDelete,
-                    padding: const EdgeInsets.only(left: 4),
-                    constraints: const BoxConstraints(),
-                  ),
+                  ],
+                ),
               ],
             ),
           ),
@@ -426,6 +416,31 @@ class _MedicineCardState extends State<MedicineCard>
                     ? Colors.white
                     : (isMissed ? AppColors.error : AppColors.primary),
               ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBadge({required IconData icon, required String label, required Color color}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 11, color: color),
+          const SizedBox(width: 3),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 11,
+              color: color,
+              fontWeight: FontWeight.w600,
             ),
           ),
         ],

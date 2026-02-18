@@ -5,10 +5,12 @@ import '../models/medicine.dart';
 import '../services/cache_service.dart';
 import '../services/medicine_service.dart';
 import '../services/notification_service.dart';
+import '../services/background_alarm_service.dart';
 
 class MedicineProvider extends ChangeNotifier {
   final MedicineService _service = MedicineService();
   final NotificationService _notificationService = NotificationService();
+  final BackgroundAlarmService _alarmService = BackgroundAlarmService();
   final CacheService _cacheService = CacheService();
   List<Medicine> _medicines = [];
   Map<String, bool> _takenToday = {};
@@ -302,6 +304,19 @@ class MedicineProvider extends ChangeNotifier {
   Future<void> addMedicine(Medicine medicine) async {
     try {
       await _service.addMedicine(medicine);
+      
+      // Schedule native Android alarms for each medicine time
+      debugPrint('[Provider] Scheduling ${medicine.times.length} alarms for ${medicine.name}');
+      for (final time in medicine.times) {
+        await _alarmService.scheduleAlarm(
+          medicineId: '${medicine.id}_$time',
+          medicineName: medicine.name,
+          dosage: medicine.dosage,
+          time: time,
+          foodInstruction: medicine.foodInstruction,
+        );
+      }
+      
       // Real-time stream will update the list automatically
     } catch (e) {
       debugPrint('Error adding medicine: $e');
@@ -312,6 +327,14 @@ class MedicineProvider extends ChangeNotifier {
   Future<void> removeMedicine(String id) async {
     if (_userId == null) return;
     try {
+      // Find the medicine to get its times
+      final medicine = _medicines.firstWhere((m) => m.id == id);
+      
+      // Cancel all alarms for this medicine
+      for (final time in medicine.times) {
+        await _alarmService.cancelAlarm('${id}_$time');
+      }
+      
       await _service.deleteMedicine(_userId!, id);
     } catch (e) {
       debugPrint('Error removing medicine: $e');

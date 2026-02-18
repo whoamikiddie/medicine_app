@@ -250,21 +250,29 @@ class NotificationService {
   // ─── Schedule Medicine Reminders ──────────────────────────────────
 
   Future<void> scheduleMedicineReminders(Medicine medicine) async {
-    if (!_initialized) await init();
+    debugPrint('🔔 [Notification] ═══ Starting schedule for: ${medicine.name} ═══');
+    
+    if (!_initialized) {
+      debugPrint('🔔 [Notification] Not initialized, calling init()...');
+      await init();
+    }
+    
     if (!medicine.isActive) {
-      debugPrint('[Notification] Skipping ${medicine.name} - not active');
+      debugPrint('🔔 [Notification] ⚠️ Skipping ${medicine.name} - not active');
       return;
     }
 
     // Ensure permissions before scheduling
     final hasPermissions = await ensurePermissionsGranted();
+    debugPrint('🔔 [Notification] Permissions granted: $hasPermissions');
+    
     if (!hasPermissions) {
-      debugPrint('[Notification] ⚠️ Cannot schedule ${medicine.name} - permissions denied');
+      debugPrint('🔔 [Notification] ❌ Cannot schedule ${medicine.name} - permissions denied');
       return;
     }
 
     await cancelMedicineReminders(medicine.id);
-    debugPrint('[Notification] Scheduling reminders for: ${medicine.name}');
+    debugPrint('🔔 [Notification] Scheduling ${medicine.times.length} reminders for: ${medicine.name}');
 
     for (int i = 0; i < medicine.times.length; i++) {
       final timeParts = medicine.times[i].split(':');
@@ -341,8 +349,10 @@ class NotificationService {
       }
 
       debugPrint(
-          '[Notification] Scheduled #$notifId: ${medicine.name} at $hour:$minute');
+          '🔔 [Notification] ✅ Scheduled #$notifId: ${medicine.name} at $hour:${minute.toString().padLeft(2, '0')} ($timeStr)');
     }
+    
+    debugPrint('🔔 [Notification] ═══ Completed scheduling for ${medicine.name} ═══');
   }
 
   // ─── Core Scheduling ─────────────────────────────────────────────

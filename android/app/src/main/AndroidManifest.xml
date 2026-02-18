@@ -41,6 +41,20 @@
             </intent-filter>
         </activity>
 
+        <!-- Alarm Activity for full-screen medicine reminders -->
+        <activity
+            android:name=".AlarmActivity"
+            android:exported="false"
+            android:showWhenLocked="true"
+            android:turnScreenOn="true"
+            android:theme="@style/LaunchTheme" />
+
+        <!-- Medicine Alarm Receiver for exact medicine reminders -->
+        <receiver 
+            android:name=".MedicineAlarmReceiver"
+            android:enabled="true"
+            android:exported="false" />
+
         <!-- Boot receiver for rescheduling notifications after reboot -->
         <receiver android:exported="false" android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationBootReceiver">
             <intent-filter>

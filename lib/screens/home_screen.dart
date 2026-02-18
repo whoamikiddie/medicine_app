@@ -2,10 +2,14 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../config/app_theme.dart';
 import '../services/notification_service.dart';
 import '../providers/user_provider.dart';
+import '../models/medicine.dart';
 import 'report_screen.dart';
+import 'food_schedule_screen.dart';
+import 'prescription_pdf_screen.dart';
 
 import 'chat_list_screen.dart';
 import 'ai_chat_screen.dart';
@@ -178,6 +182,7 @@ class _HomeScreenState extends State<HomeScreen> {
           const ReportScreen(),
           const AddMedicine(),
           const AIChatScreen(),
+          const FoodScheduleScreen(),
           const ProfileScreen(),
         ],
       ),
@@ -228,7 +233,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 _navItem(1, Icons.analytics_rounded, Icons.analytics_outlined),
                 _middleNavItem(),
                 _navItem(3, Icons.psychology_rounded, Icons.psychology_outlined),
-                _navItem(4, Icons.person_rounded, Icons.person_outline_rounded),
+                _navItem(4, Icons.restaurant_rounded, Icons.restaurant_outlined),
+                _navItem(5, Icons.person_rounded, Icons.person_outline_rounded),
               ],
             ),
           ),
@@ -270,7 +276,7 @@ class _HomeScreenState extends State<HomeScreen> {
         _pageController.jumpToPage(2);
       },
       child: Container(
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           gradient: AppColors.primaryGradient,
           shape: BoxShape.circle,
@@ -282,7 +288,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ],
         ),
-        child: const Icon(Icons.add_rounded, color: Colors.white, size: 28),
+        child: const Icon(Icons.add_rounded, color: Colors.white, size: 26),
       ),
     );
   }
@@ -345,31 +351,124 @@ class _DashboardView extends StatelessWidget {
                   ],
                 ),
               ),
-              ClipOval( // Profile Image / Settings
-                child: Material(
-                  color: isDark ? Colors.white.withValues(alpha: 0.1) : Colors.white,
-                  child: InkWell(
-                    onTap: () => onNavigate(4), // Go to Profile
-                    child: Padding(
-                      padding: const EdgeInsets.all(8),
-                      child: user?.profileImageUrl != null
-                          ? CircleAvatar(
-                              radius: 20,
-                              backgroundImage: NetworkImage(user!.profileImageUrl!),
-                            )
-                          : Icon(
-                              Icons.settings_rounded,
-                              color: isDark ? Colors.white : AppColors.textDark,
-                              size: 24,
-                            ),
+              Row(
+                children: [
+                  // SOS Emergency Button
+                  GestureDetector(
+                    onTap: () async {
+                      final emergency = user?.emergencyContact ?? '';
+                      if (emergency.isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Set emergency contact in Profile first'),
+                            backgroundColor: AppColors.error,
+                          ),
+                        );
+                        return;
+                      }
+                      final uri = Uri.parse('tel:$emergency');
+                      if (await canLaunchUrl(uri)) await launchUrl(uri);
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: AppColors.error.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: AppColors.error.withValues(alpha: 0.3)),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.emergency_rounded, color: AppColors.error, size: 16),
+                          const SizedBox(width: 4),
+                          const Text('SOS', style: TextStyle(color: AppColors.error, fontSize: 12, fontWeight: FontWeight.bold)),
+                        ],
+                      ),
                     ),
                   ),
-                ),
+                  const SizedBox(width: 8),
+                  // Profile avatar
+                  ClipOval(
+                    child: Material(
+                      color: isDark ? Colors.white.withValues(alpha: 0.1) : Colors.white,
+                      child: InkWell(
+                        onTap: () => onNavigate(5), // Go to Profile (index 5 now)
+                        child: Padding(
+                          padding: const EdgeInsets.all(8),
+                          child: user?.profileImageUrl != null
+                              ? CircleAvatar(
+                                  radius: 20,
+                                  backgroundImage: NetworkImage(user!.profileImageUrl!),
+                                )
+                              : Icon(
+                                  Icons.settings_rounded,
+                                  color: isDark ? Colors.white : AppColors.textDark,
+                                  size: 24,
+                                ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
 
           const SizedBox(height: 24),
+
+          // AI Coaching Banner (shown when adherence < 70%)
+          if (provider.activeMedicines.isNotEmpty &&
+              provider.adherencePercentage < 70) ...[
+            GestureDetector(
+              onTap: () => onNavigate(3), // Navigate to AI Chat
+              child: Container(
+                margin: const EdgeInsets.only(bottom: 16),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFFFF6B35), Color(0xFFFF4081)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFFFF6B35).withValues(alpha: 0.3),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(Icons.psychology_rounded, color: Colors.white, size: 22),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('MediBot Coaching Available',
+                            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
+                          Text(
+                            'Your adherence is ${provider.adherencePercentage.toStringAsFixed(0)}%. Tap for AI tips to improve!',
+                            style: const TextStyle(color: Colors.white70, fontSize: 12),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white70, size: 16),
+                  ],
+                ),
+              ),
+            ),
+          ],
 
           // Stats Cards
           SizedBox(
@@ -408,72 +507,142 @@ class _DashboardView extends StatelessWidget {
 
           const SizedBox(height: 20),
 
-          // My Prescriptions Card
-          GestureDetector(
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const PrescriptionListScreen()),
-              );
-            },
-            child: Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    const Color(0xFF6B4CFF).withValues(alpha: 0.15),
-                    const Color(0xFF6B4CFF).withValues(alpha: 0.05),
-                  ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  color: const Color(0xFF6B4CFF).withValues(alpha: 0.2),
-                ),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(12),
+          // Quick Action Cards Row
+          Row(
+            children: [
+              // My Prescriptions Card
+              Expanded(
+                child: GestureDetector(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const PrescriptionListScreen()),
+                    );
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF6B4CFF).withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(12),
+                      gradient: LinearGradient(
+                        colors: [
+                          const Color(0xFF6B4CFF).withValues(alpha: 0.15),
+                          const Color(0xFF6B4CFF).withValues(alpha: 0.05),
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: const Color(0xFF6B4CFF).withValues(alpha: 0.2)),
                     ),
-                    child: const Icon(Icons.description_rounded, color: Color(0xFF6B4CFF)),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          'My Prescriptions',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            color: isDark ? Colors.white : AppColors.textDark,
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF6B4CFF).withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(10),
                           ),
+                          child: const Icon(Icons.description_rounded, color: Color(0xFF6B4CFF), size: 20),
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Upload, view & export',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: isDark ? Colors.white70 : AppColors.textMuted,
-                          ),
-                        ),
+                        const SizedBox(height: 10),
+                        Text('Prescriptions',
+                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600,
+                            color: isDark ? Colors.white : AppColors.textDark)),
+                        Text('Upload & view', style: TextStyle(fontSize: 11,
+                          color: isDark ? Colors.white54 : AppColors.textMuted)),
                       ],
                     ),
                   ),
-                  Icon(
-                    Icons.arrow_forward_ios_rounded,
-                    size: 16,
-                    color: isDark ? Colors.white54 : AppColors.textMuted,
-                  ),
-                ],
+                ),
               ),
-            ),
+              const SizedBox(width: 12),
+              // Food Schedule Card
+              Expanded(
+                child: GestureDetector(
+                  onTap: () => onNavigate(4),
+                  child: Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          Colors.orange.withValues(alpha: 0.15),
+                          Colors.orange.withValues(alpha: 0.05),
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: Colors.orange.withValues(alpha: 0.2)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.orange.withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Icon(Icons.restaurant_rounded, color: Colors.orange, size: 20),
+                        ),
+                        const SizedBox(height: 10),
+                        Text('Food Schedule',
+                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600,
+                            color: isDark ? Colors.white : AppColors.textDark)),
+                        Text('Meal timing', style: TextStyle(fontSize: 11,
+                          color: isDark ? Colors.white54 : AppColors.textMuted)),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              // Generate PDF Card
+              Expanded(
+                child: GestureDetector(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const PrescriptionPdfScreen()),
+                    );
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          Colors.green.withValues(alpha: 0.15),
+                          Colors.green.withValues(alpha: 0.05),
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: Colors.green.withValues(alpha: 0.2)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.green.withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Icon(Icons.picture_as_pdf_rounded, color: Colors.green, size: 20),
+                        ),
+                        const SizedBox(height: 10),
+                        Text('Generate PDF',
+                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600,
+                            color: isDark ? Colors.white : AppColors.textDark)),
+                        Text('Export report', style: TextStyle(fontSize: 11,
+                          color: isDark ? Colors.white54 : AppColors.textMuted)),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
 
           const SizedBox(height: 16),
@@ -670,13 +839,13 @@ class _DashboardView extends StatelessWidget {
               subtitle: 'Enjoy your healthy day!',
             )
           else
-            _buildMedicineList(provider),
+            _buildMedicineList(context, provider),
         ],
       ),
     );
   }
 
-  Widget _buildMedicineList(MedicineProvider provider) {
+  Widget _buildMedicineList(BuildContext context, MedicineProvider provider) {
     // Sort times
     final sortedTimes = provider.medicineTimes.keys.toList()
       ..sort((a, b) {
@@ -727,6 +896,7 @@ class _DashboardView extends StatelessWidget {
                 time: time,
                 isTaken: provider.isTaken(medicine.id, time),
                 onToggle: () => provider.toggleTaken(medicine.id, time),
+                onDelete: () => _confirmDelete(context, provider, medicine),
               ),
             )),
           ],
@@ -756,6 +926,63 @@ class _DashboardView extends StatelessWidget {
     if (hour < 12) return Icons.wb_sunny_rounded;
     if (hour < 17) return Icons.wb_cloudy_rounded;
     return Icons.nights_stay_rounded;
+  }
+
+  void _confirmDelete(BuildContext context, MedicineProvider provider, Medicine medicine) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: isDark ? const Color(0xFF1E1E2E) : Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: AppColors.error.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(Icons.delete_outline_rounded,
+                  color: AppColors.error, size: 24),
+            ),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Text('Delete Medicine?',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
+        content: Text(
+          'Are you sure you want to delete "${medicine.name}"? This action cannot be undone.',
+          style: const TextStyle(fontSize: 14, height: 1.5),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              provider.removeMedicine(medicine.id);
+              Navigator.pop(ctx);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('${medicine.name} deleted'),
+                  backgroundColor: AppColors.success,
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.error,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
   }
 }
 
