@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../config/app_theme.dart';
 import '../models/prescription.dart';
 import '../services/prescription_service.dart';
+import '../providers/user_provider.dart';
 import 'add_prescription_screen.dart';
 import 'prescription_detail_screen.dart';
 
@@ -15,6 +17,8 @@ class PrescriptionListScreen extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final userId = FirebaseAuth.instance.currentUser?.uid ?? '';
     final prescriptionService = PrescriptionService();
+    final user = context.watch<UserProvider>().currentUser;
+    final isDoctor = user?.isDoctor ?? false;
 
     return Container(
       decoration: BoxDecoration(
@@ -29,20 +33,23 @@ class PrescriptionListScreen extends StatelessWidget {
           elevation: 0,
           foregroundColor: isDark ? Colors.white : AppColors.textDark,
         ),
-        floatingActionButton: FloatingActionButton.extended(
-          onPressed: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => const AddPrescriptionScreen(),
-              ),
-            );
-          },
-          icon: const Icon(Icons.add_rounded),
-          label: const Text('Add Prescription'),
-          backgroundColor: AppColors.primary,
-          foregroundColor: Colors.white,
-        ),
+        // Only show Add button for doctors
+        floatingActionButton: isDoctor
+            ? FloatingActionButton.extended(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const AddPrescriptionScreen(),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.add_rounded),
+                label: const Text('Add Prescription'),
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+              )
+            : null,
         body: StreamBuilder<List<Prescription>>(
           stream: prescriptionService.getPrescriptions(userId),
           builder: (context, snapshot) {

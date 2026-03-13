@@ -9,8 +9,10 @@ import android.os.Bundle
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
+import android.view.View
 import android.view.WindowManager
 import android.widget.Button
+import android.widget.LinearLayout
 import android.widget.TextView
 
 class AlarmActivity : Activity() {
@@ -50,19 +52,43 @@ class AlarmActivity : Activity() {
         // Set medicine name
         findViewById<TextView>(R.id.medicine_name).text = medicineName
 
-        // Build details text
+        // Set dosage
+        if (dosage.isNotEmpty()) {
+            findViewById<TextView>(R.id.dosage_text).text = dosage
+        } else {
+            findViewById<LinearLayout>(R.id.dosage_row).visibility = View.GONE
+        }
+
+        // Set food instruction
         val foodText = when (foodInstruction) {
-            "before" -> "🍽️ Take before food"
-            "after"  -> "🍽️ Take after food"
-            "with"   -> "🍽️ Take with food"
+            "before" -> "Take before food"
+            "after"  -> "Take after food"
+            "with"   -> "Take with food"
             else     -> ""
         }
-        val detailsText = buildString {
-            if (dosage.isNotEmpty()) append("💊 $dosage\n")
-            if (foodText.isNotEmpty()) append("$foodText\n")
-            append("⏰ $time")
+        if (foodText.isNotEmpty()) {
+            findViewById<TextView>(R.id.food_text).text = foodText
+        } else {
+            findViewById<LinearLayout>(R.id.food_row).visibility = View.GONE
         }
-        findViewById<TextView>(R.id.medicine_details).text = detailsText
+
+        // Set time — format nicely
+        if (time.isNotEmpty()) {
+            val parts = time.split(":")
+            if (parts.size == 2) {
+                val hour = parts[0].toIntOrNull() ?: 0
+                val minute = parts[1]
+                val period = if (hour >= 12) "PM" else "AM"
+                val displayHour = when {
+                    hour > 12 -> hour - 12
+                    hour == 0 -> 12
+                    else -> hour
+                }
+                findViewById<TextView>(R.id.time_text).text = "$displayHour:$minute $period"
+            } else {
+                findViewById<TextView>(R.id.time_text).text = time
+            }
+        }
 
         // Start vibration
         startVibration()
@@ -110,4 +136,3 @@ class AlarmActivity : Activity() {
         stopVibration()
     }
 }
-

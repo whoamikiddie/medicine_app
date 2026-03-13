@@ -11,6 +11,8 @@ class Prescription {
   final String? imageUrl;       // Firebase Storage URL
   final String? localImagePath; // Local path before upload
   final List<String> medicines; // Medicine names in prescription
+  final String? createdByDoctorId; // Doctor who created this prescription
+  final String? createdByRole;     // 'doctor' or 'patient'
   final DateTime dateIssued;
   final DateTime createdAt;
 
@@ -25,6 +27,8 @@ class Prescription {
     this.imageUrl,
     this.localImagePath,
     this.medicines = const [],
+    this.createdByDoctorId,
+    this.createdByRole,
     required this.dateIssued,
     required this.createdAt,
   });
@@ -39,6 +43,8 @@ class Prescription {
     'notes': notes,
     'imageUrl': imageUrl,
     'medicines': medicines,
+    'createdByDoctorId': createdByDoctorId,
+    'createdByRole': createdByRole,
     'dateIssued': Timestamp.fromDate(dateIssued),
     'createdAt': Timestamp.fromDate(createdAt),
   };
@@ -54,6 +60,8 @@ class Prescription {
       notes: json['notes']?.toString(),
       imageUrl: json['imageUrl']?.toString(),
       medicines: List<String>.from(json['medicines'] ?? []),
+      createdByDoctorId: json['createdByDoctorId']?.toString(),
+      createdByRole: json['createdByRole']?.toString(),
       dateIssued: _parseDateTime(json['dateIssued']),
       createdAt: _parseDateTime(json['createdAt']),
     );

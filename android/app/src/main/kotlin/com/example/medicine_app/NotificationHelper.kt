@@ -83,18 +83,18 @@ object NotificationHelper {
         
         // Build notification text
         val foodText = when (foodInstruction) {
-            "before" -> "🍽️ Take before food"
-            "after" -> "🍽️ Take after food"
-            "with" -> "🍽️ Take with food"
+            "before" -> "Take before food"
+            "after" -> "Take after food"
+            "with" -> "Take with food"
             else -> ""
         }
         
         val contentText = buildString {
-            append("💊 $dosage")
+            append(dosage)
             if (foodText.isNotEmpty()) {
-                append(" • $foodText")
+                append(" | $foodText")
             }
-            append(" • ⏰ $time")
+            append(" | $time")
         }
         
         // Alarm sound
@@ -104,7 +104,7 @@ object NotificationHelper {
         // Build notification
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
-            .setContentTitle("⏰ Time to take $medicineName")
+            .setContentTitle("Time to take $medicineName")
             .setContentText(contentText)
             .setStyle(NotificationCompat.BigTextStyle().bigText(contentText))
             .setPriority(NotificationCompat.PRIORITY_MAX)

@@ -362,7 +362,14 @@ class _PrescriptionPdfScreenState extends State<PrescriptionPdfScreen> {
               ),
               child: Row(
                 children: [
-                  const Text('📋', style: TextStyle(fontSize: 40)),
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(Icons.description_rounded, color: Colors.white, size: 32),
+                  ),
                   const SizedBox(width: 16),
                   Expanded(
                     child: Column(
@@ -467,7 +474,15 @@ class _PrescriptionPdfScreenState extends State<PrescriptionPdfScreen> {
                     ),
                     child: Row(
                       children: [
-                        const Text('💊', style: TextStyle(fontSize: 24)),
+                        Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Icon(Icons.medication_rounded, color: AppColors.primary, size: 20),
+                        ),
                         const SizedBox(width: 12),
                         Expanded(
                           child: Column(

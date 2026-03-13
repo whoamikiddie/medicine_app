@@ -548,8 +548,10 @@ class _DashboardView extends StatelessWidget {
                         Text('Prescriptions',
                           style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600,
                             color: isDark ? Colors.white : AppColors.textDark)),
-                        Text('Upload & view', style: TextStyle(fontSize: 11,
-                          color: isDark ? Colors.white54 : AppColors.textMuted)),
+                        Text(
+                          (user?.isDoctor ?? false) ? 'Upload & manage' : 'View records',
+                          style: TextStyle(fontSize: 11,
+                            color: isDark ? Colors.white54 : AppColors.textMuted)),
                       ],
                     ),
                   ),

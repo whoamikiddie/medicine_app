@@ -44,14 +44,34 @@ class NotificationService {
     if (_initialized) return;
 
     tzdata.initializeTimeZones();
-    // Auto-detect user's timezone instead of hardcoding
+    // Auto-detect user's timezone
+    // DateTime.now().timeZoneName returns abbreviations (e.g. 'IST')
+    // which are NOT valid tz database keys — need to map them
     final String timeZoneName = DateTime.now().timeZoneName;
+    const tzAbbrevMap = {
+      'IST': 'Asia/Kolkata',
+      'EST': 'America/New_York',
+      'CST': 'America/Chicago',
+      'MST': 'America/Denver',
+      'PST': 'America/Los_Angeles',
+      'GMT': 'Europe/London',
+      'BST': 'Europe/London',
+      'CET': 'Europe/Berlin',
+      'JST': 'Asia/Tokyo',
+      'AEST': 'Australia/Sydney',
+      'SGT': 'Asia/Singapore',
+    };
+    final resolvedTz = tzAbbrevMap[timeZoneName] ?? timeZoneName;
     try {
-      tz.setLocalLocation(tz.getLocation(timeZoneName));
+      tz.setLocalLocation(tz.getLocation(resolvedTz));
     } catch (e) {
-      // Fallback to UTC if timezone not found
-      debugPrint('[Notification] Timezone $timeZoneName not found, using UTC');
-      tz.setLocalLocation(tz.UTC);
+      // Final fallback to Asia/Kolkata for Indian users
+      debugPrint('[Notification] Timezone $timeZoneName ($resolvedTz) not found, using Asia/Kolkata');
+      try {
+        tz.setLocalLocation(tz.getLocation('Asia/Kolkata'));
+      } catch (_) {
+        tz.setLocalLocation(tz.UTC);
+      }
     }
 
     const androidSettings =
@@ -613,9 +633,9 @@ class NotificationService {
 
     // Build summary body grouped by time period
     final Map<String, List<String>> groups = {
-      '🌅 Morning': [],
-      '☀️ Afternoon': [],
-      '🌙 Evening': [],
+      'Morning': [],
+      'Afternoon': [],
+      'Evening': [],
     };
 
     for (final med in medicines) {
@@ -629,11 +649,11 @@ class NotificationService {
         final entry = '${med.name} ${med.dosage} — $timeStr';
 
         if (h < 12) {
-          groups['🌅 Morning']!.add(entry);
+          groups['Morning']!.add(entry);
         } else if (h < 17) {
-          groups['☀️ Afternoon']!.add(entry);
+          groups['Afternoon']!.add(entry);
         } else {
-          groups['🌙 Evening']!.add(entry);
+          groups['Evening']!.add(entry);
         }
       }
     }
