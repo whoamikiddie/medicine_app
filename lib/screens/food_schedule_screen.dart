@@ -793,7 +793,6 @@ class _MedicineAIInfoSheetState extends State<_MedicineAIInfoSheet> {
         if (line.trim().isEmpty) return const SizedBox(height: 8);
         // Numbered header lines like "1. Therapeutic purpose"
         final isHeader = RegExp(r'^\d+\.\s').hasMatch(line.trim());
-        final cleaned = line.replaceAll(RegExp(r'\*\*(.+?)\*\*'), r'\1').trim();
         return Padding(
           padding: const EdgeInsets.only(bottom: 6),
           child: _buildRichLine(line.trim(), isDark, isHeader),
