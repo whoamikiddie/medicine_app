@@ -18,9 +18,6 @@ class PrescriptionPdfScreen extends StatefulWidget {
 
 class _PrescriptionPdfScreenState extends State<PrescriptionPdfScreen> {
   bool _generating = false;
-  String _doctorName = '';
-  String _diagnosis = '';
-  String _notes = '';
   final _doctorController = TextEditingController();
   final _diagnosisController = TextEditingController();
   final _notesController = TextEditingController();

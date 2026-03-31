@@ -691,8 +691,6 @@ class _AIInsightsCardState extends State<_AIInsightsCard> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(

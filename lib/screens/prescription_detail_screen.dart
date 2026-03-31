@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import '../config/app_theme.dart';
 import '../models/prescription.dart';
+import '../providers/user_provider.dart';
 import '../services/prescription_service.dart';
 
 class PrescriptionDetailScreen extends StatelessWidget {
@@ -16,6 +18,7 @@ class PrescriptionDetailScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isDoctor = context.watch<UserProvider>().currentUser?.isDoctor ?? false;
 
     return Container(
       decoration: BoxDecoration(
@@ -36,12 +39,13 @@ class PrescriptionDetailScreen extends StatelessWidget {
               icon: const Icon(Icons.picture_as_pdf_rounded),
               tooltip: 'Export as PDF',
             ),
-            // Delete
-            IconButton(
-              onPressed: () => _showDeleteDialog(context),
-              icon: const Icon(Icons.delete_outline_rounded, color: Colors.red),
-              tooltip: 'Delete',
-            ),
+            // Delete — only for doctors
+            if (isDoctor)
+              IconButton(
+                onPressed: () => _showDeleteDialog(context),
+                icon: const Icon(Icons.delete_outline_rounded, color: Colors.red),
+                tooltip: 'Delete',
+              ),
           ],
         ),
         body: SingleChildScrollView(

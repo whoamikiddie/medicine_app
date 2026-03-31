@@ -76,10 +76,13 @@ class AuthService {
     } on FirebaseAuthException catch (e) {
       debugPrint('FirebaseAuthException in signUp: ${e.code}');
       throw _handleAuthException(e);
+    } on FirebaseException catch (e) {
+      debugPrint('FirebaseException in signUp: ${e.code} - ${e.message}');
+      throw e.message ?? 'Registration failed. Please try again.';
     } catch (e) {
       if (e is String) rethrow;
       debugPrint('Sign-up error: $e');
-      throw 'An unexpected error occurred. Please try again.';
+      throw 'Sign-up failed: ${e.toString()}';
     }
   }
 
@@ -88,48 +91,23 @@ class AuthService {
     required String email,
     required String password,
   }) async {
-    UserCredential? credential;
-    
     try {
       debugPrint('Signing in with email: $email');
       
-      // Try sign-in without accessing credential.user immediately
-      try {
-        credential = await _auth.signInWithEmailAndPassword(
-          email: email,
-          password: password,
-        );
-        debugPrint('signInWithEmailAndPassword completed');
-      } catch (signInError) {
-        debugPrint('Error in signInWithEmailAndPassword: $signInError');
-        debugPrint('Error type: ${signInError.runtimeType}');
-        rethrow;
-      }
+      final credential = await _auth.signInWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
 
-      // Now try to access the user property
-      debugPrint('Attempting to access credential.user...');
-      User? user;
-      try {
-        user = credential.user;
-        debugPrint('credential.user accessed successfully');
-      } catch (userAccessError) {
-        debugPrint('Error accessing credential.user: $userAccessError');
-        debugPrint('Error type: ${userAccessError.runtimeType}');
-        
-        // Fallback: try getting current user directly
-        debugPrint('Trying fallback: _auth.currentUser');
-        user = _auth.currentUser;
-      }
+      final user = credential.user ?? _auth.currentUser;
 
       if (user == null) {
-        debugPrint('User is null after all attempts');
         throw 'Authentication failed. Please try again.';
       }
 
       debugPrint('User UID: ${user.uid}');
 
       // Fetch user data from Firestore
-      debugPrint('Fetching user from Firestore...');
       final doc = await _firestore.collection('users').doc(user.uid).get();
 
       if (!doc.exists || doc.data() == null) {
@@ -148,19 +126,19 @@ class AuthService {
         return userModel;
       }
 
-      debugPrint('Parsing UserModel from Firestore');
       final userModel = UserModel.fromJson(doc.data()!);
-      debugPrint('Login successful: ${userModel.name}');
+      debugPrint('Login successful: ${userModel.name} (${userModel.role})');
       return userModel;
     } on FirebaseAuthException catch (e) {
       debugPrint('FirebaseAuthException: ${e.code}');
       throw _handleAuthException(e);
+    } on FirebaseException catch (e) {
+      debugPrint('FirebaseException: ${e.code} - ${e.message}');
+      throw e.message ?? 'Authentication failed. Please try again.';
     } catch (e) {
       if (e is String) rethrow;
-      debugPrint('[CATCH-ALL] Sign-in error: $e');
-      debugPrint('[CATCH-ALL] Error type: ${e.runtimeType}');
-      debugPrint('[CATCH-ALL] Stack trace: ${StackTrace.current}');
-      throw 'An unexpected error occurred. Please try again.';
+      debugPrint('Sign-in error: $e');
+      throw 'Sign-in failed: ${e.toString()}';
     }
   }
 

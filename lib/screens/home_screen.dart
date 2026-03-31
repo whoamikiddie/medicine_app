@@ -327,13 +327,13 @@ class _DashboardView extends StatelessWidget {
                         Icon(
                           _getGreetingIcon(),
                           color: Colors.orange,
-                          size: 20,
+                          size: 18,
                         ),
-                        const SizedBox(width: 8),
+                        const SizedBox(width: 6),
                         Text(
                           _getGreeting(),
                           style: TextStyle(
-                            fontSize: 14,
+                            fontSize: 13,
                             color: isDark ? Colors.white70 : AppColors.textMuted,
                           ),
                         ),
@@ -341,12 +341,14 @@ class _DashboardView extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      user?.name ?? 'Guest',
+                      _getFirstName(user?.name ?? 'Guest'),
                       style: TextStyle(
-                        fontSize: 28,
+                        fontSize: 24,
                         fontWeight: FontWeight.bold,
                         color: isDark ? Colors.white : AppColors.textDark,
                       ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ],
                 ),
@@ -376,35 +378,30 @@ class _DashboardView extends StatelessWidget {
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(color: AppColors.error.withValues(alpha: 0.3)),
                       ),
-                      child: Row(
+                      child: const Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.emergency_rounded, color: AppColors.error, size: 16),
-                          const SizedBox(width: 4),
-                          const Text('SOS', style: TextStyle(color: AppColors.error, fontSize: 12, fontWeight: FontWeight.bold)),
+                          Icon(Icons.emergency_rounded, color: AppColors.error, size: 16),
+                          SizedBox(width: 4),
+                          Text('SOS', style: TextStyle(color: AppColors.error, fontSize: 12, fontWeight: FontWeight.bold)),
                         ],
                       ),
                     ),
                   ),
                   const SizedBox(width: 8),
-                  // Profile avatar
-                  ClipOval(
-                    child: Material(
-                      color: isDark ? Colors.white.withValues(alpha: 0.1) : Colors.white,
-                      child: InkWell(
-                        onTap: () => onNavigate(5), // Go to Profile (index 5 now)
-                        child: Padding(
-                          padding: const EdgeInsets.all(8),
-                          child: user?.profileImageUrl != null
-                              ? CircleAvatar(
-                                  radius: 20,
-                                  backgroundImage: NetworkImage(user!.profileImageUrl!),
-                                )
-                              : Icon(
-                                  Icons.settings_rounded,
-                                  color: isDark ? Colors.white : AppColors.textDark,
-                                  size: 24,
-                                ),
+                  // Settings icon
+                  Material(
+                    color: isDark ? Colors.white.withValues(alpha: 0.08) : Colors.grey.shade100,
+                    borderRadius: BorderRadius.circular(14),
+                    child: InkWell(
+                      onTap: () => onNavigate(5),
+                      borderRadius: BorderRadius.circular(14),
+                      child: Padding(
+                        padding: const EdgeInsets.all(10),
+                        child: Icon(
+                          Icons.settings_rounded,
+                          color: isDark ? Colors.white70 : AppColors.textDark,
+                          size: 22,
                         ),
                       ),
                     ),
@@ -507,141 +504,42 @@ class _DashboardView extends StatelessWidget {
 
           const SizedBox(height: 20),
 
-          // Quick Action Cards Row
+          // Quick Action Cards
           Row(
             children: [
-              // My Prescriptions Card
-              Expanded(
-                child: GestureDetector(
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const PrescriptionListScreen()),
-                    );
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          const Color(0xFF6B4CFF).withValues(alpha: 0.15),
-                          const Color(0xFF6B4CFF).withValues(alpha: 0.05),
-                        ],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: const Color(0xFF6B4CFF).withValues(alpha: 0.2)),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF6B4CFF).withValues(alpha: 0.2),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: const Icon(Icons.description_rounded, color: Color(0xFF6B4CFF), size: 20),
-                        ),
-                        const SizedBox(height: 10),
-                        Text('Prescriptions',
-                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600,
-                            color: isDark ? Colors.white : AppColors.textDark)),
-                        Text(
-                          (user?.isDoctor ?? false) ? 'Upload & manage' : 'View records',
-                          style: TextStyle(fontSize: 11,
-                            color: isDark ? Colors.white54 : AppColors.textMuted)),
-                      ],
-                    ),
-                  ),
+              _buildQuickAction(
+                context: context,
+                isDark: isDark,
+                icon: Icons.description_rounded,
+                color: const Color(0xFF6B4CFF),
+                title: 'Rx Records',
+                subtitle: (user?.isDoctor ?? false) ? 'Upload' : 'View',
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const PrescriptionListScreen()),
                 ),
               ),
-              const SizedBox(width: 12),
-              // Food Schedule Card
-              Expanded(
-                child: GestureDetector(
-                  onTap: () => onNavigate(4),
-                  child: Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          Colors.orange.withValues(alpha: 0.15),
-                          Colors.orange.withValues(alpha: 0.05),
-                        ],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: Colors.orange.withValues(alpha: 0.2)),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: Colors.orange.withValues(alpha: 0.2),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: const Icon(Icons.restaurant_rounded, color: Colors.orange, size: 20),
-                        ),
-                        const SizedBox(height: 10),
-                        Text('Food Schedule',
-                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600,
-                            color: isDark ? Colors.white : AppColors.textDark)),
-                        Text('Meal timing', style: TextStyle(fontSize: 11,
-                          color: isDark ? Colors.white54 : AppColors.textMuted)),
-                      ],
-                    ),
-                  ),
-                ),
+              const SizedBox(width: 10),
+              _buildQuickAction(
+                context: context,
+                isDark: isDark,
+                icon: Icons.restaurant_rounded,
+                color: Colors.orange,
+                title: 'Diet Plan',
+                subtitle: 'Meals',
+                onTap: () => onNavigate(4),
               ),
-              const SizedBox(width: 12),
-              // Generate PDF Card
-              Expanded(
-                child: GestureDetector(
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const PrescriptionPdfScreen()),
-                    );
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          Colors.green.withValues(alpha: 0.15),
-                          Colors.green.withValues(alpha: 0.05),
-                        ],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: Colors.green.withValues(alpha: 0.2)),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: Colors.green.withValues(alpha: 0.2),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: const Icon(Icons.picture_as_pdf_rounded, color: Colors.green, size: 20),
-                        ),
-                        const SizedBox(height: 10),
-                        Text('Generate PDF',
-                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600,
-                            color: isDark ? Colors.white : AppColors.textDark)),
-                        Text('Export report', style: TextStyle(fontSize: 11,
-                          color: isDark ? Colors.white54 : AppColors.textMuted)),
-                      ],
-                    ),
-                  ),
+              const SizedBox(width: 10),
+              _buildQuickAction(
+                context: context,
+                isDark: isDark,
+                icon: Icons.picture_as_pdf_rounded,
+                color: const Color(0xFF00C853),
+                title: 'Export',
+                subtitle: 'PDF',
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const PrescriptionPdfScreen()),
                 ),
               ),
             ],
@@ -928,6 +826,78 @@ class _DashboardView extends StatelessWidget {
     if (hour < 12) return Icons.wb_sunny_rounded;
     if (hour < 17) return Icons.wb_cloudy_rounded;
     return Icons.nights_stay_rounded;
+  }
+
+  String _getFirstName(String fullName) {
+    final trimmed = fullName.trim();
+    if (trimmed.isEmpty) return 'Guest';
+    final firstName = trimmed.split(' ').first;
+    // Capitalize first letter
+    return firstName[0].toUpperCase() + firstName.substring(1);
+  }
+
+  Widget _buildQuickAction({
+    required BuildContext context,
+    required bool isDark,
+    required IconData icon,
+    required Color color,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+  }) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                color.withValues(alpha: 0.15),
+                color.withValues(alpha: 0.05),
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: color.withValues(alpha: 0.2)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(icon, color: color, size: 20),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                title,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: isDark ? Colors.white : AppColors.textDark,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              Text(
+                subtitle,
+                style: TextStyle(
+                  fontSize: 11,
+                  color: isDark ? Colors.white54 : AppColors.textMuted,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   void _confirmDelete(BuildContext context, MedicineProvider provider, Medicine medicine) {
